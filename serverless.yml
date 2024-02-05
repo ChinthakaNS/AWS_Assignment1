@@ -1,0 +1,47 @@
+service: messages-service
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.9
+  environment:
+    S3_BUCKET_NAME: ${self:custom.s3BucketName}
+    DYNAMODB_TABLE_NAME: ${self:custom.dynamoDBTableName}
+
+custom:
+  s3BucketName: messages-service-bucket
+  dynamoDBTableName: messages-service-table
+
+resources:
+  Resources:
+    MyS3Bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.s3BucketName}
+
+    MyDynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.dynamoDBTableName}
+        AttributeDefinitions:
+          - AttributeName: message_id
+            AttributeType: S
+          - AttributeName: company_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: message_id
+            KeyType: HASH
+          - AttributeName: company_id
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+functions:
+  processMessage:
+    handler: handler.process_message
+    events:
+      - http:
+          path: process-message
+          method: post
+          cors: true          
